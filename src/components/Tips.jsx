@@ -1,19 +1,25 @@
 import React, { useState } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Paper, 
-  TextField, 
-  Button, 
-  List, 
-  ListItem, 
-  ListItemText, 
+import {
+  Box,
+  Typography,
+  Paper,
+  TextField,
+  Button,
+  List,
+  ListItem,
+  ListItemText,
   Divider,
   Container,
   Alert,
-  IconButton
+  IconButton,
+  Chip,
+  Avatar
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
+import LightbulbIcon from '@mui/icons-material/Lightbulb';
+import ShareIcon from '@mui/icons-material/Share';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import EmailIcon from '@mui/icons-material/Email';
 
 // Sample tips data
 const initialTips = [
@@ -40,39 +46,82 @@ const Tips = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     // Basic email validation
     if (email && !/\S+@\S+\.\S+/.test(email)) {
       setEmailError('Por favor ingresa un correo electrónico válido');
       return;
     }
-    
+
     if (!newTip.trim()) {
       return;
     }
-    
+
     // In a real app, you would send this to a backend
     setTips([newTip, ...tips]);
     setNewTip('');
     setEmail('');
     setSubmitted(true);
     setEmailError('');
-    
+
     // Hide success message after 3 seconds
     setTimeout(() => setSubmitted(false), 3000);
   };
 
   return (
-    <Box>
-      <Typography variant="h4" gutterBottom>
-        Consejos para Usuarios del Metro
-      </Typography>
-      
-      <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h6" gutterBottom>
-          Comparte tu consejo
+    <Box className="page-section">
+      <Box sx={{ textAlign: 'center', mb: 4 }}>
+        <Typography
+          variant="h4"
+          gutterBottom
+          sx={{
+            fontWeight: 700,
+            background: 'linear-gradient(135deg, var(--primary-color), var(--primary-dark))',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            mb: 2
+          }}
+        >
+          Consejos para Usuarios del Metro
         </Typography>
-        
+
+        <Typography
+          variant="body1"
+          color="text.secondary"
+          sx={{
+            maxWidth: 700,
+            mx: 'auto',
+            fontSize: '1.1rem',
+            lineHeight: 1.6
+          }}
+        >
+          Comparte y descubre consejos útiles para navegar por el Metro CDMX.
+          Tu experiencia puede ayudar a otros usuarios.
+        </Typography>
+      </Box>
+
+      <Paper
+        elevation={0}
+        className="form-container"
+        sx={{ mb: 4 }}
+      >
+        <Box sx={{ mb: 3 }}>
+          <Typography
+            variant="h6"
+            gutterBottom
+            sx={{
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}
+          >
+            <ShareIcon color="primary" />
+            Comparte tu consejo
+          </Typography>
+        </Box>
+
         <form onSubmit={handleSubmit}>
           <TextField
             fullWidth
@@ -84,8 +133,12 @@ const Tips = () => {
             onChange={(e) => setNewTip(e.target.value)}
             margin="normal"
             required
+            placeholder="Escribe aquí tu consejo para otros usuarios del Metro..."
+            InputProps={{
+              startAdornment: <LightbulbIcon sx={{ mr: 1, color: 'primary.main', opacity: 0.7 }} />
+            }}
           />
-          
+
           <TextField
             fullWidth
             variant="outlined"
@@ -99,48 +152,140 @@ const Tips = () => {
             margin="normal"
             error={!!emailError}
             helperText={emailError}
+            placeholder="tu@email.com"
+            InputProps={{
+              startAdornment: <EmailIcon sx={{ mr: 1, color: 'primary.main', opacity: 0.7 }} />
+            }}
           />
-          
-          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+
+          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
             <Button
               type="submit"
               variant="contained"
               color="primary"
               endIcon={<SendIcon />}
               disabled={!newTip.trim()}
+              className="primary-button"
+              sx={{
+                fontWeight: 600,
+                fontSize: '1rem'
+              }}
             >
               Enviar Consejo
             </Button>
           </Box>
         </form>
-        
+
         {submitted && (
-          <Alert severity="success" sx={{ mt: 2 }}>
+          <Alert
+            severity="success"
+            sx={{ mt: 3 }}
+            icon={<FavoriteIcon />}
+          >
             ¡Gracias por tu consejo! Será revisado y publicado pronto.
           </Alert>
         )}
       </Paper>
-      
-      <Typography variant="h5" gutterBottom>
-        Consejos de la Comunidad
-      </Typography>
-      
-      <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
+
+      <Box sx={{ mb: 3 }}>
+        <Typography
+          variant="h5"
+          gutterBottom
+          sx={{
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
+          }}
+        >
+          <LightbulbIcon color="primary" />
+          Consejos de la Comunidad
+        </Typography>
+
+        <Chip
+          label={`${tips.length} consejos disponibles`}
+          color="primary"
+          variant="outlined"
+          size="small"
+          sx={{ mb: 2 }}
+        />
+      </Box>
+
+      <List sx={{ width: '100%', bgcolor: 'transparent' }}>
         {tips.map((tip, index) => (
           <React.Fragment key={index}>
-            <ListItem alignItems="flex-start">
-              <ListItemText
-                primary={tip}
-                primaryTypographyProps={{
-                  variant: 'body1',
-                  color: 'text.primary',
+            <Paper
+              elevation={0}
+              className="tip-card"
+              sx={{ mb: 2 }}
+            >
+              <ListItem alignItems="flex-start" sx={{ p: 0 }}>
+                <Box className="tip-content" sx={{ width: '100%' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                    <Avatar
+                      sx={{
+                        bgcolor: 'primary.main',
+                        width: 40,
+                        height: 40,
+                        mt: 0.5
+                      }}
+                    >
+                      <LightbulbIcon />
+                    </Avatar>
+
+                    <Box sx={{ flex: 1 }}>
+                      <ListItemText
+                        primary={tip}
+                        primaryTypographyProps={{
+                          variant: 'body1',
+                          color: 'text.primary',
+                          lineHeight: 1.6,
+                          fontWeight: 400,
+                        }}
+                      />
+
+                      <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Chip
+                          label="Consejo útil"
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                        />
+                        <Typography variant="caption" color="text.secondary">
+                          Consejo #{index + 1}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                </Box>
+              </ListItem>
+            </Paper>
+            {index < tips.length - 1 && (
+              <Divider
+                component="li"
+                sx={{
+                  my: 1,
+                  opacity: 0.3,
+                  borderColor: 'divider'
                 }}
               />
-            </ListItem>
-            {index < tips.length - 1 && <Divider component="li" />}
+            )}
           </React.Fragment>
         ))}
       </List>
+
+      <Box sx={{ mt: 4, textAlign: 'center' }}>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{
+            fontStyle: 'italic',
+            opacity: 0.8
+          }}
+        >
+          Estos consejos son proporcionados por la comunidad de usuarios del Metro CDMX.
+        </Typography>
+      </Box>
     </Box>
   );
 };

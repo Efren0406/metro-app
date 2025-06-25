@@ -1,66 +1,176 @@
 import React, { useState } from 'react';
-import { Box, Typography, TextField, Button, MenuItem, Paper, Grid } from '@mui/material';
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  MenuItem,
+  Paper,
+  Grid,
+  Chip,
+  Divider,
+  Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText
+} from '@mui/material';
+import DirectionsIcon from '@mui/icons-material/Directions';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import TrainIcon from '@mui/icons-material/Train';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 
-// Sample metro stations data (simplified)
-const stations = [
-  { id: 1, name: 'Observatorio', line: 'Línea 1' },
-  { id: 2, name: 'Tacubaya', line: 'Línea 1' },
-  { id: 3, name: 'Juanacatlán', line: 'Línea 1' },
-  { id: 4, name: 'Chapultepec', line: 'Línea 1' },
-  { id: 5, name: 'Sevilla', line: 'Línea 1' },
-  { id: 6, name: 'Insurgentes', line: 'Línea 1' },
-  { id: 7, name: 'Cuauhtémoc', line: 'Línea 1' },
-  { id: 8, name: 'Balderas', line: 'Línea 1' },
-  { id: 9, name: 'Salto del Agua', line: 'Línea 1' },
-  { id: 10, name: 'Isabel la Católica', line: 'Línea 1' },
-  { id: 11, name: 'Pino Suárez', line: 'Línea 1' },
-  { id: 12, name: 'Merced', line: 'Línea 1' },
-  { id: 13, name: 'Candelaria', line: 'Línea 1' },
-  { id: 14, name: 'San Lázaro', line: 'Línea 1' },
-  { id: 15, name: 'Moctezuma', line: 'Línea 1' },
-  { id: 16, name: 'Balbuena', line: 'Línea 1' },
-  { id: 17, name: 'Boulevard Puerto Aéreo', line: 'Línea 1' },
-  { id: 18, name: 'Gómez Farías', line: 'Línea 1' },
-  { id: 19, name: 'Zaragoza', line: 'Línea 1' },
-  { id: 20, name: 'Pantitlán', line: 'Línea 1' },
-];
+// Importar la base de datos completa de estaciones
+import {
+  getAllStations,
+  getStationsByLine,
+  metroLines
+} from '../data/metroStations';
+// Importar el grafo y Dijkstra
+import { buildMetroGraph, dijkstra, getRouteDetails } from '../data/metroGraph';
 
 const RoutePlanner = () => {
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
+  const [selectedLine, setSelectedLine] = useState('');
   const [result, setResult] = useState(null);
 
-  // Calculate estimated time (simplified calculation)
+  // Obtener todas las estaciones
+  const allStations = getAllStations();
+  // Obtener estaciones filtradas por línea seleccionada
+  const filteredStations = selectedLine ? getStationsByLine(selectedLine) : allStations;
+
+  // Calcular ruta óptima usando Dijkstra
   const calculateRoute = () => {
     if (!origin || !destination) return;
-
-    // Find the indices of the selected stations
-    const originIndex = stations.findIndex(s => s.id === origin);
-    const destIndex = stations.findIndex(s => s.id === destination);
-    
-    if (originIndex === -1 || destIndex === -1) return;
-
-    // Calculate number of stations between origin and destination
-    const stationCount = Math.abs(destIndex - originIndex);
-    
-    // Calculate time (2.5 minutes per station)
-    const time = stationCount * 2.5;
-
+    const graph = buildMetroGraph();
+    const dijkstraResult = dijkstra(graph, origin, destination);
+    if (!dijkstraResult) {
+      setResult({
+        error: true,
+        message: 'No se pudo calcular la ruta entre las estaciones seleccionadas.'
+      });
+      return;
+    }
+    const { steps, transfers } = getRouteDetails(dijkstraResult.path);
     setResult({
-      time: time,
-      stations: stationCount,
-      origin: stations[originIndex],
-      destination: stations[destIndex]
+      steps,
+      transfers,
+      time: dijkstraResult.time,
+      origin: steps[0],
+      destination: steps[steps.length - 1],
+      stations: steps.length,
+      error: false
     });
   };
 
+  // Limpiar selección de línea
+  const clearLineFilter = () => {
+    setSelectedLine('');
+    setOrigin('');
+    setDestination('');
+    setResult(null);
+  };
+
   return (
-    <Box>
-      <Typography variant="h4" gutterBottom>
-        Planificador de Ruta
-      </Typography>
-      
-      <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+    <Box className="page-section">
+      <Box sx={{ textAlign: 'center', mb: 4 }}>
+        <Typography
+          variant="h4"
+          gutterBottom
+          sx={{
+            fontWeight: 700,
+            background: 'linear-gradient(135deg, var(--primary-color), var(--primary-dark))',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            mb: 2
+          }}
+        >
+          Planificador de Ruta
+        </Typography>
+        <Typography
+          variant="body1"
+          color="text.secondary"
+          sx={{
+            maxWidth: 600,
+            mx: 'auto',
+            fontSize: '1.1rem',
+            lineHeight: 1.6
+          }}
+        >
+          Calcula la ruta más eficiente entre estaciones del Metro CDMX.
+          Obtén tiempos estimados, transbordos y el listado de estaciones por las que pasarás.
+        </Typography>
+      </Box>
+      <Paper elevation={0} className="form-container" sx={{ mb: 4 }}>
+        <Box sx={{ mb: 3 }}>
+          <Typography
+            variant="h6"
+            gutterBottom
+            sx={{
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}
+          >
+            <DirectionsIcon color="primary" />
+            Selecciona tu ruta
+          </Typography>
+        </Box>
+        {/* Filtro por línea */}
+        <Grid container spacing={3} sx={{ mb: 3 }}>
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel>Filtrar por línea (opcional)</InputLabel>
+              <Select
+                value={selectedLine}
+                onChange={(e) => setSelectedLine(e.target.value)}
+                label="Filtrar por línea (opcional)"
+                sx={{
+                  minWidth: '300px',
+                  '& .MuiInputBase-root': {
+                    minHeight: '56px'
+                  }
+                }}
+              >
+                <MenuItem value="">
+                  <em>Todas las líneas</em>
+                </MenuItem>
+                {Object.keys(metroLines).map((lineName) => (
+                  <MenuItem key={lineName} value={lineName}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box
+                        sx={{
+                          width: 16,
+                          height: 16,
+                          borderRadius: '50%',
+                          backgroundColor: metroLines[lineName].color
+                        }}
+                      />
+                      {lineName}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Button
+              variant="outlined"
+              onClick={clearLineFilter}
+              disabled={!selectedLine}
+              sx={{ height: '56px', width: '100%' }}
+            >
+              Limpiar filtro
+            </Button>
+          </Grid>
+        </Grid>
         <Grid container spacing={3}>
           <Grid item xs={12} md={5}>
             <TextField
@@ -70,15 +180,33 @@ const RoutePlanner = () => {
               value={origin}
               onChange={(e) => setOrigin(e.target.value)}
               variant="outlined"
+              sx={{
+                minWidth: '300px',
+                '& .MuiInputBase-root': {
+                  minHeight: '56px'
+                }
+              }}
             >
-              {stations.map((station) => (
+              <MenuItem value="">
+                <em>Selecciona una estación</em>
+              </MenuItem>
+              {filteredStations.map((station) => (
                 <MenuItem key={station.id} value={station.id}>
-                  {station.name} ({station.line})
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box
+                      sx={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: '50%',
+                        backgroundColor: station.color
+                      }}
+                    />
+                    {station.name} ({station.line})
+                  </Box>
                 </MenuItem>
               ))}
             </TextField>
           </Grid>
-          
           <Grid item xs={12} md={5}>
             <TextField
               select
@@ -87,15 +215,33 @@ const RoutePlanner = () => {
               value={destination}
               onChange={(e) => setDestination(e.target.value)}
               variant="outlined"
+              sx={{
+                minWidth: '300px',
+                '& .MuiInputBase-root': {
+                  minHeight: '56px'
+                }
+              }}
             >
-              {stations.map((station) => (
+              <MenuItem value="">
+                <em>Selecciona una estación</em>
+              </MenuItem>
+              {filteredStations.map((station) => (
                 <MenuItem key={station.id} value={station.id}>
-                  {station.name} ({station.line})
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box
+                      sx={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: '50%',
+                        backgroundColor: station.color
+                      }}
+                    />
+                    {station.name} ({station.line})
+                  </Box>
                 </MenuItem>
               ))}
             </TextField>
           </Grid>
-          
           <Grid item xs={12} md={2}>
             <Button
               fullWidth
@@ -104,28 +250,319 @@ const RoutePlanner = () => {
               onClick={calculateRoute}
               size="large"
               disabled={!origin || !destination}
-              sx={{ height: '56px' }}
+              sx={{
+                height: '56px',
+                fontWeight: 600,
+                fontSize: '1rem'
+              }}
+              className="primary-button"
             >
               Calcular
             </Button>
           </Grid>
         </Grid>
       </Paper>
-
-      
       {result && (
-        <Paper elevation={3} sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Resultado de la ruta
-          </Typography>
-          <Typography>Origen: {result.origin.name} ({result.origin.line})</Typography>
-          <Typography>Destino: {result.destination.name} ({result.destination.line})</Typography>
-          <Typography>Estaciones intermedias: {result.stations - 1}</Typography>
-          <Typography variant="h6" sx={{ mt: 2 }}>
-            Tiempo estimado: {result.time} minutos
-          </Typography>
+        <Paper elevation={0} className="result-card" sx={{ p: 3 }}>
+          {result.error ? (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {result.message}
+            </Alert>
+          ) : (
+            <>
+              <Box sx={{ mb: 2 }}>
+                <Typography
+                  variant="h6"
+                  gutterBottom
+                  sx={{
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    color: 'success.main'
+                  }}
+                >
+                  <TrainIcon />
+                  Resultado de la ruta
+                </Typography>
+              </Box>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <Box className="result-item">
+                    <Box className="icon-container">
+                      <LocationOnIcon />
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">
+                        Origen
+                      </Typography>
+                      <Typography variant="body1" fontWeight={600}>
+                        {result.origin.name}
+                      </Typography>
+                      <Chip
+                        label={result.origin.line}
+                        size="small"
+                        sx={{
+                          backgroundColor: result.origin.color,
+                          color: 'white',
+                          mt: 0.5
+                        }}
+                      />
+                    </Box>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Box className="result-item">
+                    <Box className="icon-container">
+                      <LocationOnIcon />
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">
+                        Destino
+                      </Typography>
+                      <Typography variant="body1" fontWeight={600}>
+                        {result.destination.name}
+                      </Typography>
+                      <Chip
+                        label={result.destination.line}
+                        size="small"
+                        sx={{
+                          backgroundColor: result.destination.color,
+                          color: 'white',
+                          mt: 0.5
+                        }}
+                      />
+                    </Box>
+                  </Box>
+                </Grid>
+              </Grid>
+              <Divider sx={{ my: 2 }} />
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={3}>
+                  <Box className="result-item">
+                    <Box className="icon-container">
+                      <TrainIcon />
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">
+                        Estaciones totales
+                      </Typography>
+                      <Typography variant="h6" fontWeight={600}>
+                        {result.stations}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <Box className="result-item">
+                    <Box className="icon-container">
+                      <AccessTimeIcon />
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">
+                        Tiempo estimado
+                      </Typography>
+                      <Typography variant="h6" fontWeight={600} color="success.main">
+                        {result.time} min
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <Box className="result-item">
+                    <Box className="icon-container">
+                      <SwapHorizIcon />
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">
+                        Transbordos
+                      </Typography>
+                      <Typography variant="h6" fontWeight={600} color="warning.main">
+                        {result.transfers}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <Box className="result-item">
+                    <Box className="icon-container">
+                      <DirectionsIcon />
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">
+                        Tipo de ruta
+                      </Typography>
+                      <Typography variant="h6" fontWeight={600} color="info.main">
+                        {result.transfers === 0 ? 'Directa' : 'Con transbordo'}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Grid>
+              </Grid>
+              <Divider sx={{ my: 2 }} />
+              {/* Listado de estaciones con transbordos fusionados */}
+              {(() => {
+                // Agrupar estaciones consecutivas con el mismo nombre (transbordos)
+                const compactSteps = [];
+                let i = 0;
+                while (i < result.steps.length) {
+                  const current = result.steps[i];
+                  let j = i + 1;
+                  const lines = [current.line];
+                  // Buscar repeticiones consecutivas del mismo nombre
+                  while (
+                    j < result.steps.length &&
+                    result.steps[j].name === current.name
+                  ) {
+                    lines.push(result.steps[j].line);
+                    j++;
+                  }
+                  compactSteps.push({
+                    ...current,
+                    lines: [...new Set(lines)],
+                    ids: result.steps.slice(i, j).map(s => s.id)
+                  });
+                  i = j;
+                }
+                return (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflowX: 'auto',
+                      py: 1,
+                      px: 2,
+                      bgcolor: '#f8f9fa',
+                      borderRadius: 2,
+                      gap: 1,
+                      minHeight: 56,
+                      maxWidth: '100%',
+                      width: '100%',
+                    }}
+                  >
+                    {compactSteps.map((station, idx) => (
+                      <React.Fragment key={station.ids.join('-')}>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            minWidth: { xs: 48, sm: 60, md: 70 },
+                            maxWidth: 90,
+                            flex: '0 1 auto',
+                          }}
+                          title={station.name}
+                        >
+                          {/* Círculo de colores múltiples */}
+                          <Box
+                            sx={{
+                              width: 14,
+                              height: 14,
+                              borderRadius: '50%',
+                              mb: 0.5,
+                              background:
+                                station.lines.length === 1
+                                  ? station.color
+                                  : `conic-gradient(${station.lines
+                                      .map((line, i) => {
+                                        const color =
+                                          Object.values(metroLines)
+                                            .find(l => l.name === line)?.color || '#888';
+                                        const start = (i / station.lines.length) * 100;
+                                        const end = ((i + 1) / station.lines.length) * 100;
+                                        return `${color} ${start}%, ${color} ${end}%`;
+                                      })
+                                      .join(', ')})`,
+                              border: '1.5px solid #fff',
+                              boxShadow: '0 0 0 1px #bdbdbd',
+                            }}
+                          />
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontWeight:
+                                idx === 0 || idx === compactSteps.length - 1 ? 700 : 400,
+                              color:
+                                idx === 0
+                                  ? 'primary.main'
+                                  : idx === compactSteps.length - 1
+                                  ? 'secondary.main'
+                                  : 'text.primary',
+                              fontSize: { xs: '0.70rem', sm: '0.80rem', md: '0.95rem' },
+                              textAlign: 'center',
+                              whiteSpace: 'normal',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              lineHeight: 1.1,
+                              maxHeight: 32,
+                              maxWidth: 80,
+                              wordBreak: 'break-word',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {station.name}
+                          </Typography>
+                        </Box>
+                        {idx < compactSteps.length - 1 && (
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              mx: 0.5,
+                              color: 'text.disabled',
+                              fontSize: { xs: '1.1rem', sm: '1.2rem' },
+                              userSelect: 'none',
+                              alignSelf: 'center',
+                            }}
+                          >
+                            →
+                          </Typography>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </Box>
+                );
+              })()}
+              <Alert
+                severity="info"
+                sx={{ mt: 2 }}
+                icon={<AccessTimeIcon />}
+              >
+                Los tiempos son estimados y pueden variar según las condiciones del servicio.
+                {result.transfers > 0 && ' Se incluyen 5 minutos adicionales por transbordo.'}
+              </Alert>
+            </>
+          )}
         </Paper>
       )}
+      {/* Información adicional sobre las líneas */}
+      <Paper elevation={0} className="enhanced-card" sx={{ p: 3, mt: 4 }}>
+        <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+          Líneas del Metro CDMX
+        </Typography>
+        <Grid container spacing={2}>
+          {Object.entries(metroLines).map(([lineName, lineInfo]) => (
+            <Grid item xs={6} sm={4} md={3} key={lineName}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <Box
+                  sx={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: '50%',
+                    backgroundColor: lineInfo.color
+                  }}
+                />
+                <Typography variant="body2" fontWeight={500}>
+                  {lineName}
+                </Typography>
+              </Box>
+              <Typography variant="caption" color="text.secondary">
+                {lineInfo.stations.length} estaciones
+              </Typography>
+            </Grid>
+          ))}
+        </Grid>
+      </Paper>
     </Box>
   );
 };

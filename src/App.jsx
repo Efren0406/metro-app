@@ -7,25 +7,71 @@ import './App.css';
 
 function App() {
   return (
-    <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="static">
+    <Box className="app-container" sx={{ flexGrow: 1 }}>
+      <AppBar position="static" elevation={0}>
         <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Metro CDMX
+          <Typography
+            variant="h6"
+            component="div"
+            sx={{
+              flexGrow: 1,
+              fontWeight: 700,
+              letterSpacing: '0.5px',
+              fontSize: { xs: '1.1rem', sm: '1.25rem' }
+            }}
+          >
+            🚇 Metro CDMX
           </Typography>
-          <Button color="inherit" component={Link} to="/">Mapa</Button>
-          <Button color="inherit" component={Link} to="/ruta">Ruta</Button>
-          <Button color="inherit" component={Link} to="/consejos">Consejos</Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              color="inherit"
+              component={Link}
+              to="/"
+              className="nav-link"
+              sx={{
+                fontWeight: 500,
+                fontSize: { xs: '0.875rem', sm: '1rem' }
+              }}
+            >
+              Mapa
+            </Button>
+            <Button
+              color="inherit"
+              component={Link}
+              to="/ruta"
+              className="nav-link"
+              sx={{
+                fontWeight: 500,
+                fontSize: { xs: '0.875rem', sm: '1rem' }
+              }}
+            >
+              Ruta
+            </Button>
+            <Button
+              color="inherit"
+              component={Link}
+              to="/consejos"
+              className="nav-link"
+              sx={{
+                fontWeight: 500,
+                fontSize: { xs: '0.875rem', sm: '1rem' }
+              }}
+            >
+              Consejos
+            </Button>
+          </Box>
         </Toolbar>
       </AppBar>
-      
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Routes>
-          <Route path="/" element={<MetroMap />} />
-          <Route path="/ruta" element={<RoutePlanner />} />
-          <Route path="/consejos" element={<Tips />} />
-        </Routes>
-      </Container>
+
+      <Box className="main-content">
+        <Container maxWidth="lg" sx={{ py: 4 }}>
+          <Routes>
+            <Route path="/" element={<MetroMap />} />
+            <Route path="/ruta" element={<RoutePlanner />} />
+            <Route path="/consejos" element={<Tips />} />
+          </Routes>
+        </Container>
+      </Box>
     </Box>
   );
 }
