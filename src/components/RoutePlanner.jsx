@@ -16,7 +16,8 @@ import {
   List,
   ListItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  Autocomplete
 } from '@mui/material';
 import DirectionsIcon from '@mui/icons-material/Directions';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -34,8 +35,8 @@ import {
 import { buildMetroGraph, dijkstra, getRouteDetails } from '../data/metroGraph';
 
 const RoutePlanner = () => {
-  const [origin, setOrigin] = useState('');
-  const [destination, setDestination] = useState('');
+  const [origin, setOrigin] = useState(null);
+  const [destination, setDestination] = useState(null);
   const [selectedLine, setSelectedLine] = useState('');
   const [result, setResult] = useState(null);
 
@@ -48,7 +49,7 @@ const RoutePlanner = () => {
   const calculateRoute = () => {
     if (!origin || !destination) return;
     const graph = buildMetroGraph();
-    const dijkstraResult = dijkstra(graph, origin, destination);
+    const dijkstraResult = dijkstra(graph, origin.id, destination.id);
     if (!dijkstraResult) {
       setResult({
         error: true,
@@ -71,8 +72,8 @@ const RoutePlanner = () => {
   // Limpiar selección de línea
   const clearLineFilter = () => {
     setSelectedLine('');
-    setOrigin('');
-    setDestination('');
+    setOrigin(null);
+    setDestination(null);
     setResult(null);
   };
 
@@ -173,74 +174,86 @@ const RoutePlanner = () => {
         </Grid>
         <Grid container spacing={3}>
           <Grid item xs={12} md={5}>
-            <TextField
-              select
+            <Autocomplete
               fullWidth
-              label="Estación de origen"
               value={origin}
-              onChange={(e) => setOrigin(e.target.value)}
-              variant="outlined"
-              sx={{
-                minWidth: '300px',
-                '& .MuiInputBase-root': {
-                  minHeight: '56px'
-                }
+              onChange={(event, newValue) => {
+                setOrigin(newValue);
               }}
-            >
-              <MenuItem value="">
-                <em>Selecciona una estación</em>
-              </MenuItem>
-              {filteredStations.map((station) => (
-                <MenuItem key={station.id} value={station.id}>
+              options={filteredStations}
+              getOptionLabel={(option) => option.name}
+              clearOnEscape
+              renderOption={(props, option) => (
+                <li {...props} key={option.id}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Box
                       sx={{
                         width: 12,
                         height: 12,
                         borderRadius: '50%',
-                        backgroundColor: station.color
+                        backgroundColor: option.color
                       }}
                     />
-                    {station.name} ({station.line})
+                    {option.name} ({option.line})
                   </Box>
-                </MenuItem>
-              ))}
-            </TextField>
+                </li>
+              )}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Estación de origen"
+                  variant="outlined"
+                  placeholder="Busca una estación..."
+                  sx={{
+                    minWidth: '300px',
+                    '& .MuiInputBase-root': {
+                      minHeight: '56px'
+                    }
+                  }}
+                />
+              )}
+            />
           </Grid>
           <Grid item xs={12} md={5}>
-            <TextField
-              select
+            <Autocomplete
               fullWidth
-              label="Estación de destino"
               value={destination}
-              onChange={(e) => setDestination(e.target.value)}
-              variant="outlined"
-              sx={{
-                minWidth: '300px',
-                '& .MuiInputBase-root': {
-                  minHeight: '56px'
-                }
+              onChange={(event, newValue) => {
+                setDestination(newValue);
               }}
-            >
-              <MenuItem value="">
-                <em>Selecciona una estación</em>
-              </MenuItem>
-              {filteredStations.map((station) => (
-                <MenuItem key={station.id} value={station.id}>
+              options={filteredStations}
+              getOptionLabel={(option) => option.name}
+              clearOnEscape
+              renderOption={(props, option) => (
+                <li {...props} key={option.id}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Box
                       sx={{
                         width: 12,
                         height: 12,
                         borderRadius: '50%',
-                        backgroundColor: station.color
+                        backgroundColor: option.color
                       }}
                     />
-                    {station.name} ({station.line})
+                    {option.name} ({option.line})
                   </Box>
-                </MenuItem>
-              ))}
-            </TextField>
+                </li>
+              )}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Estación de destino"
+                  variant="outlined"
+                  placeholder="Busca una estación..."
+                  sx={{
+                    minWidth: '300px',
+                    '& .MuiInputBase-root': {
+                      minHeight: '56px'
+                    }
+                  }}
+                />
+              )}
+            />
           </Grid>
           <Grid item xs={12} md={2}>
             <Button
