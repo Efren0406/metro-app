@@ -13,13 +13,17 @@ import {
   Alert,
   IconButton,
   Chip,
-  Avatar
+  Avatar,
+  CircularProgress
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import ShareIcon from '@mui/icons-material/Share';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import EmailIcon from '@mui/icons-material/Email';
+import PersonIcon from '@mui/icons-material/Person';
+import emailjs from '@emailjs/browser';
+import { emailJSConfig, defaultSenderEmail } from '../config/emailjs';
 
 // Sample tips data
 const initialTips = [
@@ -41,31 +45,96 @@ const Tips = () => {
   const [tips, setTips] = useState(initialTips);
   const [newTip, setNewTip] = useState('');
   const [email, setEmail] = useState('');
+  const [userName, setUserName] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [emailError, setEmailError] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setSending(true);
+    setSendError('');
+    setNameError('');
+    setEmailError('');
 
-    // Basic email validation
+    // Validación del nombre (requerido)
+    if (!userName.trim()) {
+      setNameError('Por favor ingresa tu nombre');
+      setSending(false);
+      return;
+    }
+
+    // Validación básica del email si se proporciona
     if (email && !/\S+@\S+\.\S+/.test(email)) {
       setEmailError('Por favor ingresa un correo electrónico válido');
+      setSending(false);
       return;
     }
 
     if (!newTip.trim()) {
+      setSending(false);
       return;
     }
 
-    // In a real app, you would send this to a backend
-    setTips([newTip, ...tips]);
-    setNewTip('');
-    setEmail('');
-    setSubmitted(true);
-    setEmailError('');
+    try {
+      // Obtener fecha y hora actual
+      const now = new Date();
+      const currentDate = now.toLocaleDateString('es-MX', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      const currentTime = now.toLocaleTimeString('es-MX', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
 
-    // Hide success message after 3 seconds
-    setTimeout(() => setSubmitted(false), 3000);
+      // Preparar los datos para el template de EmailJS
+      const templateParams = {
+        to_email: emailJSConfig.targetEmail,
+        from_name: userName.trim(),
+        from_email: email.trim() || defaultSenderEmail,
+        user_name: userName.trim(),
+        tip_message: newTip.trim(),
+        reply_to: email.trim() || defaultSenderEmail,
+        subject: 'Nuevo Consejo para Metro CDMX',
+        current_date: currentDate,
+        current_time: currentTime
+      };
+
+      // Enviar el correo usando EmailJS
+      const response = await emailjs.send(
+        emailJSConfig.serviceID,
+        emailJSConfig.templateID,
+        templateParams,
+        emailJSConfig.userID
+      );
+
+      console.log('Correo enviado exitosamente:', response);
+
+      // Agregar el tip a la lista local (simulando aprobación automática)
+      setTips([newTip, ...tips]);
+
+      // Limpiar el formulario
+      setNewTip('');
+      setEmail('');
+      setUserName('');
+      setSubmitted(true);
+
+      // Ocultar mensaje de éxito después de 5 segundos
+      setTimeout(() => setSubmitted(false), 5000);
+
+    } catch (error) {
+      console.error('Error al enviar el correo:', error);
+      setSendError('Hubo un error al enviar tu consejo. Por favor intenta nuevamente.');
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -125,10 +194,29 @@ const Tips = () => {
         <form onSubmit={handleSubmit}>
           <TextField
             fullWidth
+            variant="outlined"
+            label="Tu nombre *"
+            value={userName}
+            onChange={(e) => {
+              setUserName(e.target.value);
+              if (nameError) setNameError('');
+            }}
+            margin="normal"
+            required
+            error={!!nameError}
+            helperText={nameError}
+            placeholder="Ingresa tu nombre"
+            InputProps={{
+              startAdornment: <PersonIcon sx={{ mr: 1, color: 'primary.main', opacity: 0.7 }} />
+            }}
+          />
+
+          <TextField
+            fullWidth
             multiline
             rows={4}
             variant="outlined"
-            label="Tu consejo"
+            label="Tu consejo *"
             value={newTip}
             onChange={(e) => setNewTip(e.target.value)}
             margin="normal"
@@ -151,27 +239,33 @@ const Tips = () => {
             }}
             margin="normal"
             error={!!emailError}
-            helperText={emailError}
+            helperText={emailError || 'Si no proporcionas tu correo, se usará uno genérico'}
             placeholder="tu@email.com"
             InputProps={{
               startAdornment: <EmailIcon sx={{ mr: 1, color: 'primary.main', opacity: 0.7 }} />
             }}
           />
 
+          {sendError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {sendError}
+            </Alert>
+          )}
+
           <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
             <Button
               type="submit"
               variant="contained"
               color="primary"
-              endIcon={<SendIcon />}
-              disabled={!newTip.trim()}
+              endIcon={sending ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+              disabled={!newTip.trim() || !userName.trim() || sending}
               className="primary-button"
               sx={{
                 fontWeight: 600,
                 fontSize: '1rem'
               }}
             >
-              Enviar Consejo
+              {sending ? 'Enviando...' : 'Enviar Consejo'}
             </Button>
           </Box>
         </form>
@@ -182,7 +276,7 @@ const Tips = () => {
             sx={{ mt: 3 }}
             icon={<FavoriteIcon />}
           >
-            ¡Gracias por tu consejo! Será revisado y publicado pronto.
+            ¡Gracias {userName} por tu consejo! Ha sido enviado y será revisado pronto.
           </Alert>
         )}
       </Paper>
